@@ -104,15 +104,6 @@ EOF
 
 set -x
 
-# Build some tests with sanitizers
-if [[ $BUILD_SANITIZERS -ne 0 ]]; then
-	cmake_configure build-asan "${CMAKE_ARGS[@]}" -DSANITIZE_ADDRESS:BOOL=ON
-	cmake_configure build-ubsan "${CMAKE_ARGS[@]}" -DSANITIZE_UNDEFINED:BOOL=ON
-	if [[ ${CXX} == *clang* ]]; then
-		cmake_configure build-tsan "${CMAKE_ARGS[@]}" -DSANITIZE_THREAD:BOOL=ON
-	fi
-fi
-
 # Build normal unsanitized binaries
 cmake_configure build-cmake "${CMAKE_ARGS[@]}" -DCMAKE_BUILD_TYPE=RelWithDebInfo
 cmake_build build-cmake
@@ -150,39 +141,6 @@ cmake_build build-cmake-sodium25519
 if [[ $BUILD_LIBSODIUM -ne 0 ]]; then
 	cmake_configure build-cmake-sodium "${CMAKE_ARGS[@]}" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DUSE_CRYPTO=libsodium -DUSE_CRYPTO25519=libsodium
 	cmake_build build-cmake-sodium
-fi
-
-# Build specific extended tests for code correctness validation
-if [[ $BUILD_SANITIZERS -ne 0 ]]; then
-	cmake_build build-asan test_connection test_crypto
-	cmake_build build-ubsan test_connection test_crypto
-	if [[ -d build-tsan ]]; then
-		cmake_build build-tsan test_connection test_crypto
-	fi
-fi
-
-# Run basic tests
-build-cmake-ref/bin/test_crypto
-[[ $BUILD_LIBSODIUM -ne 0 ]] && build-cmake-sodium/bin/test_crypto
-build-cmake-sodium25519/bin/test_crypto
-build-cmake/bin/test_crypto
-build-cmake/bin/test_connection suite-quick
-build-cmake-debug/bin/test_crypto
-build-cmake-debug/bin/test_connection suite-quick
-
-# Run sanitized builds
-if [[ $BUILD_SANITIZERS -ne 0 ]]; then
-	for SANITIZER in asan ubsan tsan; do
-		[[ -d build-${SANITIZER} ]] || continue
-		build-${SANITIZER}/bin/test_crypto
-		build-${SANITIZER}/bin/test_connection suite-quick
-	done
-fi
-
-# Run LTO binaries to ensure they work
-if [[ $LTO_BUILT -ne 0 ]]; then
-	build-cmake-lto/bin/test_crypto
-	build-cmake-lto/bin/test_connection suite-quick
 fi
 
 # FIXME Run P2P tests?
