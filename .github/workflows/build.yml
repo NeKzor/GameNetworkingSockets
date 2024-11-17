@@ -1,4 +1,4 @@
-name: "research"
+name: CI
 
 on:
   workflow_dispatch:
